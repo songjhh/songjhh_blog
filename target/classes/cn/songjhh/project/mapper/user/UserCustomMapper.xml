@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="cn.songjhh.project.mapper.user.UserCustomMapper" >
+
+    <!--    <resultMap type="UserCustom" id="UserResult">
+            <id property="id" column="id"/>
+            <result property="userName" column="user_name"/>
+            <result property="password" column="password"/>
+            <result property="createTime" column="create_time"/>
+            <result property="lastTime" column="last_time"/>
+        </resultMap>-->
+    <!--    <select id="getUserList" parameterType="cn.songjhh.project.po.user.UserQueryVo"
+            resultType="cn.songjhh.project.po.user.UserCustom">
+        SELECT * FROM user WHERE user.user_name='songjhh'
+        &lt;!&ndash;<where>&ndash;&gt;
+            &lt;!&ndash;<include refid="get_users_where"></include>&ndash;&gt;
+        &lt;!&ndash;</where>&ndash;&gt;
+    </select>-->
+
+    <sql id="get_user_where">
+         <if test="userCustom!=null">
+             <if test="userCustom.username!=null and userCustom.username!=''">
+                 user.userName LIKE '%${userCustom.username}%'
+            </if>
+        </if>
+    </sql>
+
+    <select id="getByUserName" parameterType="String" resultType="cn.songjhh.project.po.user.UserCustom">
+        select user.* from user where userName=#{userName}
+    </select>
+
+    <select id="getRolesByUserName" parameterType="String" resultType="String">
+        select r.roleName from user u,role r,user_role ur where ur.userId=u.id and ur.roleId=r.id and u.userName=#{userName}
+    </select>
+
+    <select id="getPermissionsByRole" parameterType="String" resultType="String">
+        select p.permissionName from role r,permission p,permission_role pr where pr.roleId=r.id and pr.permissionId=p.id and r.roleName=#{roleName}
+    </select>
+
+    <select id="getUserList" parameterType="cn.songjhh.project.po.user.UserQueryVo"
+            resultType="cn.songjhh.project.po.user.UserCustom">
+        SELECT user.* FROM user
+        <where>
+            <include refid="get_user_where"></include>
+        </where>
+    </select>
+
+</mapper>

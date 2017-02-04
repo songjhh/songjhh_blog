@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation=
+               "http://www.springframework.org/schema/mvc
+               http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+               http://www.springframework.org/schema/context
+               http://www.springframework.org/schema/context/spring-context.xsd
+               http://www.springframework.org/schema/aop
+               http://www.springframework.org/schema/aop/spring-aop.xsd
+               http://www.springframework.org/schema/beans
+               http://www.springframework.org/schema/beans/spring-beans-4.3.xsd">
+
+    <mvc:annotation-driven conversion-service="conversionService" validator="validator"></mvc:annotation-driven>
+
+    <context:component-scan base-package="cn.songjhh.project.controller"></context:component-scan>
+
+    <mvc:default-servlet-handler/>
+
+    <mvc:resources location="/" mapping="/**/*.css"/>
+    <mvc:resources location="/" mapping="/**/*.js"/>
+    <mvc:resources location="/" mapping="/**/*.jsp"/>
+
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="prefix" value="/WEB-INF/views/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+
+    <!--自定义参数绑定-->
+    <bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+        <!--转换器-->
+        <property name="converters">
+            <!--<list>-->
+            <!--日期类型转换-->
+            <bean class="cn.songjhh.project.controller.converter.CustomDataConverter"/>
+            <!--</list>-->
+        </property>
+    </bean>
+
+    <!--检验器-->
+    <bean id="validator"
+          class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean">
+        <!-- 校验器-->
+        <property name="providerClass" value="org.hibernate.validator.HibernateValidator" />
+        <!-- 指定校验使用的资源文件，再文件中配置校验错误信息，如果不指定则默认使用classpath下的ValidationMessages.properties -->
+        <property name="validationMessageSource" ref="messageSource" />
+    </bean>
+
+    <!-- 校验错误信息配置文件 -->
+    <bean id="messageSource"
+          class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+        <!-- 资源文件名-->
+        <property name="basenames">
+            <list>
+                <value>classpath:CustomValidationMessages</value>
+            </list>
+        </property>
+        <!-- 资源文件编码格式 -->
+        <property name="fileEncodings" value="utf-8" />
+        <!-- 对资源文件内容缓存时间，单位秒 -->
+        <property name="cacheSeconds" value="120" />
+    </bean>
+
+    <!--全局异常处理器1-->
+    <bean class="cn.songjhh.project.exception.CustomExceptionResolver"></bean>
+
+    <!--全局异常处理器2-->
+<!--    <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+        &lt;!&ndash; 定义默认的异常处理页面，当该异常类型的注册时使用 &ndash;&gt;
+        <property name="defaultErrorView" value="error"></property>
+        &lt;!&ndash; 定义异常处理页面用来获取异常信息的变量名，默认名为exception &ndash;&gt;
+        <property name="exceptionAttribute" value="ex"></property>
+        &lt;!&ndash; 定义需要特殊处理的异常，用类名或完全路径名作为key，异常也页名作为值 &ndash;&gt;
+        <property name="exceptionMappings">
+            <props>
+                <prop key="org.apache.shiro.authz.UnauthorizedException">/403</prop>
+                <prop key="org.apache.shiro.authz.UnauthenticatedException">/error</prop>
+                <prop key="IOException">/eroro</prop>
+            </props>
+        </property>
+    </bean>-->
+
+    <!-- 文件上传 -->
+    <bean id="multipartResolver"
+          class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <!-- 设置上传文件的最大尺寸为5MB -->
+        <property name="maxUploadSize">
+            <value>5242880</value>
+        </property>
+    </bean>
+
+    <!-- 开启shiro注解-->
+    <aop:config proxy-target-class="true"></aop:config>
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+</beans>

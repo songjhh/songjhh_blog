@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation=
+               "http://www.springframework.org/schema/context
+               http://www.springframework.org/schema/context/spring-context.xsd
+               http://www.springframework.org/schema/beans
+               http://www.springframework.org/schema/beans/spring-beans-4.3.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+
+    <description>== Shiro Components ==</description>
+
+    <!--扫描包-->
+    <context:component-scan base-package="cn.songjhh.project.service.impl"></context:component-scan>
+
+    <!-- 会话Session ID生成器 -->
+    <bean id="sessionIdGenerator" class="org.apache.shiro.session.mgt.eis.JavaUuidSessionIdGenerator"/>
+
+    <!-- 会话Cookie模板 -->
+    <bean id="sessionIdCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+        <!--cookie的name，我故意取名叫xxxxbaidu -->
+        <constructor-arg value="v_v-s-baidu"/>
+        <property name="httpOnly" value="true"/>
+        <!--cookie的有效时间 -->
+        <property name="maxAge" value="-1"/>
+        <!-- 配置存储Session Cookie的domain为 一级域名
+        <property name="domain" value=".itboy.net"/>
+         -->
+    </bean>
+
+    <!-- 用户信息记住我功能的相关配置 -->
+    <bean id="rememberMeCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+        <constructor-arg value="v_v-re-baidu"/>
+        <property name="httpOnly" value="true"/>
+        <!-- 配置存储rememberMe Cookie的domain为 一级域名
+        <property name="domain" value=".itboy.net"/>
+         -->
+        <property name="maxAge" value="2592000"/><!-- 30天时间，记住我30天 -->
+    </bean>
+
+    <!-- rememberMe管理器 -->
+    <bean id="rememberMeManager" class="org.apache.shiro.web.mgt.CookieRememberMeManager">
+        <!-- rememberMe cookie加密的密钥 建议每个项目都不一样 默认AES算法 密钥长度（128 256 512 位）-->
+        <property name="cipherKey"
+                  value="#{T(org.apache.shiro.codec.Base64).decode('4AvVhmFLUs0KTA3Kprsdag==')}"/>
+        <property name="cookie" ref="rememberMeCookie"/>
+    </bean>
+
+    <!-- custom shiro session listener -->
+    <bean id="customSessionListener" class="cn.songjhh.project.shiro.listenter.CustomSessionListener">
+        <!--<property name="shiroSessionRepository" ref="jedisShiroSessionRepository"/>-->
+    </bean>
+
+    <!-- Shiro生命周期处理器-->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
+
+    <!-- 缓存管理器 使用Ehcache实现 -->
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <property name="cacheManagerConfigFile" value="classpath:spring/ehcache.xml"/>
+    </bean>
+
+    <!-- 凭证匹配器 -->
+    <bean id="credentialsMatcher"
+          class="cn.songjhh.project.util.RetryLimitHashedCredentialsMatcher">
+        <constructor-arg ref="cacheManager" />
+        <property name="hashAlgorithmName" value="md5" />
+        <property name="hashIterations" value="3" />
+        <property name="storedCredentialsHexEncoded" value="true" />
+    </bean>
+
+    <!-- 会话验证调度器 -->
+   <bean id="sessionValidationScheduler" class="org.apache.shiro.session.mgt.ExecutorServiceSessionValidationScheduler">
+         <!--间隔多少时间检查，不配置是60分钟 &ndash;&gt;-->
+        <property name="interval" value="1800000"/>
+        <property name="sessionManager" ref="sessionManager"/>
+    </bean>
+
+     <!--custom shiro session DAO-->
+    <bean id="sessionDAO" class="org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO">
+        <!--<property name="shiroSessionRepository" ref="jedisShiroSessionRepository"/>-->
+        <property name="activeSessionsCacheName" value="shiro-activeSessionCache"/>
+        <property name="sessionIdGenerator" ref="sessionIdGenerator"/>
+    </bean>
+
+    <!--控制并发登录人数-->
+    <!--constructor-arg：通过构造函数注入-->
+    <!--property：通过setter对应的方法注入-->
+    <bean id="kickoutSessionControlFilter" class="cn.songjhh.project.shiro.filter.kickoutSessionControlFilter">
+        <!--获取相应的cache来缓存用户登录的会话，用于保存用户-会话之间的关系-->
+        <property name="cacheManager" ref="cacheManager"/>
+        <!--根据会话id，获取会话进行踢出操作-->
+        <property name="sessionManager" ref="sessionManager"/>
+        <!--是否踢出后来登录的，默认是false，即后登录的用户踢出前者登录的用户-->
+        <property name="kickoutAfter" value="false"/>
+        <!--同一个用户最大的会话数，默认1-->
+        <property name="maxSession" value="1"/>
+        <!--被踢出后重定向到的地址-->
+        <property name="kickoutUrl" value="/user/login"/>
+    </bean>
+
+
+    <!--基于Form表单的身份验证过滤器-->
+    <bean id="formAuthenticationFilter" class="org.apache.shiro.web.filter.authc.FormAuthenticationFilter">
+        <property name="usernameParam" value="userName" />
+        <property name="passwordParam" value="password" />
+        <property name="rememberMeParam" value="rememberMe" />
+        <property name="loginUrl" value="/user/login" />
+    </bean>
+
+    <!--自定义Realm-->
+    <bean id="myRealm" class="cn.songjhh.project.realm.MyRealm">
+        <property name="credentialsMatcher" ref="credentialsMatcher"/>
+        <property name="cachingEnabled" value="true" />
+        <property name="authenticationCachingEnabled" value="true" />
+        <property name="authenticationCacheName" value="authenticationCache" />
+        <property name="authorizationCachingEnabled" value="true" />
+        <property name="authorizationCacheName" value="authorizationCache" />
+    </bean>
+
+    <!-- 安全管理器 -->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="myRealm"/>
+        <property name="rememberMeManager" ref="rememberMeManager"/>
+        <property name="cacheManager" ref="cacheManager"/>
+        <property name="sessionManager" ref="sessionManager"/>
+    </bean>
+
+    <!--Shiro过滤器-->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <!--Shiro的核心安全接口-->
+        <property name="securityManager" ref="securityManager" />
+        <!--身份认证失败，则跳转到登录页面的配置-->
+        <property name="loginUrl" value="/user/login" />
+        <!--权限认证失败，则跳转到指定页面-->
+        <property name="unauthorizedUrl" value="/" />
+
+        <property name="filters">
+            <map>
+                <entry key="authc" value-ref="formAuthenticationFilter" />
+                <!--<entry key="sysUser" value-ref="sysUserFilter"/>-->
+                <entry key="kickout" value-ref="kickoutSessionControlFilter"/>
+            </map>
+        </property>
+
+        <!--	初始配置，现采用自定义	-->
+        <property name="filterChainDefinitions" >
+            <value>
+                <!--/login=anon-->
+                /user/setting/**=authc
+                /**=kickout
+                /user/logout=logout
+                <!--/blogger/**=roles-->
+                <!--/**=user-->
+                <!--/admin*=authc-->
+                <!--/student=roles[teacher]-->
+                <!--/teacher=perms["user:create"]-->
+            </value>
+        </property>
+    </bean>
+
+    <!-- Session Manager -->
+    <bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+        <!-- session 有效时间为半小时 （毫秒单位）-->
+        <property name="globalSessionTimeout" value="1800000"/>
+        <!--设置sessionDAO-->
+        <property name="sessionDAO" ref="sessionDAO"/>
+        <!-- session 监听，可以多个。 -->
+        <property name="sessionListeners">
+            <list>
+                <ref bean="customSessionListener"/>
+            </list>
+        </property>
+        <!-- 间隔多少时间检查，不配置是60分钟 -->
+        <property name="sessionValidationScheduler" ref="sessionValidationScheduler"/>
+        <!-- 是否开启 检测，默认开启 -->
+        <property name="sessionValidationSchedulerEnabled" value="true"/>
+        <!-- 是否删除无效的，默认也是开启 -->
+        <property name="deleteInvalidSessions" value="true"/>
+        <!-- 会话Cookie模板 -->
+        <property name="sessionIdCookie" ref="sessionIdCookie"/>
+    </bean>
+
+</beans>
