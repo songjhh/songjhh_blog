@@ -5,6 +5,7 @@
  邮箱：songjhh0312@gmail.com
 
 1. 相关技术
+
 本博客系统是利用Spring+Spring MVC+Mybatis搭建的，Apache的Shrio作为安全框架实现安全认证，前端使用来自Twitter的Bootstrap架构进行页面搭建，编写
 博文和解析博文用的是Bootstrap_Markdown,数据库用mysql,整个项目使用Maven来管理。下面详细列出使用的基本技术：
 - Spring
@@ -14,6 +15,7 @@
 - Bootstrap
 - Bootstrap_Markdown
 - mysql
+ 
+2. 博客的基本功能
 
- 博客的基本功能
 - 博文编写使用Markdown语法编写，
