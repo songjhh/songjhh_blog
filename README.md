@@ -14,7 +14,7 @@
 - Shiro
 - Bootstrap
 - Bootstrap_Markdown
-- mysql
+- mysql\
  
  **博客功能**
 
